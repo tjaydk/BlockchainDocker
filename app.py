@@ -21,19 +21,31 @@ def retrieveList():
     clientsArray = []
     port = 4000
     ip = dockerIp()
-    for i in range(10):
-        clientsString = urllib.request.urlopen(ip + ":" + (port+i)).read()
-        array = clients.split(",")
-        if len(array) > len(clientsArray):
-            clientsArray = array
+    requestString = "http://" + ip + ":4000/list"
     
-    clientsArray.append(socket.gethostname)
+    for i in range(10):
+        requestString = "http://" + ip + ":" + str(port+i) + "/list"
+        try:
+            req = urllib.request.urlopen(requestString)
+            req.add_header('Content-Type', 'plain/text')
+            response = req.read()
+            clientsString = str(response)
+            # Takes a substring to remove the b' and the ' in beginning and end of response
+            # array = clientsString[2:-1].split(",")
+            # Swaps the user list if the one recieved from the client is bigger
+            #if len(array) > len(clientsArray):
+            #    clientsArray = array
+        except urllib.error.URLError as e:
+            print(e.reason)
+    # Returns the list of clients and appends self to the list
+    # clientsArray.append(socket.gethostname)
     return clientsArray
+
     
 # Retrieve clients clienlist
 @app.route("/list")
 def list():
-    return onlineUsers
+    return "client1,client2"
     
 # Introduce client to list of clients
 @app.route("/list/<username>")
@@ -46,12 +58,12 @@ def online(username):
 @app.route("/")
 def hello():
     ip = dockerIp()
-    #onlineUsers = retrieveList()
+    onlineUsers = retrieveList()
     
     onlineHtmlString = ""
     if len(onlineUsers) > 0:
         for u in onlineUsers:
-            onlineHtmlString += "<li>"+u+"</li>"
+            onlineHtmlString += "<li>"+str(u)+"</li>"
     else:
         onlineHtmlString = "<li>No users online</li>"
 
@@ -59,7 +71,7 @@ def hello():
            "<b>Username:</b> {username}<br/>" \
            "<b>Host ip:</b> " + ip + "<br/>" \
            "<b>Clients online:</b>" \
-           "<ul>" + onlineHtmlString + "/<ul>" \
+           "<ul>" + onlineHtmlString + "/<ul>"
            
     return html.format(name=os.getenv("NAME", "world"), username=socket.gethostname())
 
