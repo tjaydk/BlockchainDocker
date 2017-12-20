@@ -5,6 +5,8 @@ import urllib.request
 import os
 import socket
 
+# Configuration
+socket.setdefaulttimeout(1)
 
 # Global variables
 app = Flask(__name__)
@@ -27,51 +29,39 @@ def retrieveList():
     clientsString = ""
     
     port = 4000
-    ip
+    ip = dockerIp()
     ownPort = int(socket.gethostname())
     
-    for i in range(2):
+    for i in range(5):
         currentPort = port+i
         # Dont ask own port
         if currentPort == ownPort:
             continue
-        requestString = "http://" + ip.rstrip('\n') + ":" + str(currentPort) + "/list"
+        requestString = "http://" + ip.rstrip('\n') + ":" + str(currentPort) + "/status"
         try:
             req = urllib.request.urlopen(requestString)
-            response = req.read()
-            clientsString = str(response)
-            # Takes a substring to remove the b' and the ' in beginning and end of response
-            array = clientsString[2:-1].split(",")
-            # Swaps the user list if the one recieved from the client is bigger
-            if len(array) > len(clientsArray):
-                clientsArray = array
         except urllib.error.URLError as e:
             print(e.reason)
+            continue
+        except socket.timeout as err:
+            continue
+            
+        clientsArray.append(currentPort)
+    
     # Returns the list of clients and appends self to the list if not already there
-    '''try:
+    try:
         clientsArray.index(ownPort)
     except ValueError:
         clientsArray.append(ownPort)
-        return clientsArray'''
-    clientsArray.append(ownPort)
+        return clientsArray
     
     return clientsArray
 
     
-# Retrieve clients clientlist
-@app.route("/list")
-def list():
-    userlistString = "<p>"
-    for u in onlineUsers:
-        userlistString += str(u)+","
-    userlistString = userlistString[:-1] + "</p>"
-    return userlistString
-    
-# Introduce client to list of clients
-@app.route("/list/<username>")
-def online(username):
-    onlineUsers.append(username)
-    return "<p>Welcome " + username + "</p>"
+# Is client online
+@app.route("/status")
+def status():
+    return "yes!!"
 
 
 @app.route("/")
@@ -86,11 +76,11 @@ def hello():
     else:
         onlineHtmlString = "<li>No users online</li>"
 
-    html = "<h3>Hello {name}!</h3>" \
+    html = "<h3>Blockchain client info</h3>" \
            "<b>Username:</b> {username}<br/>" \
            "<b>Host ip:</b> " + ip + "<br/>" \
            "<b>Clients online:</b>" \
-           "<ul>" + onlineHtmlString + "/<ul>"
+           "<ul>" + onlineHtmlString + "</ul>"
            
     return html.format(name=os.getenv("NAME", "world"), username=socket.gethostname())
 
